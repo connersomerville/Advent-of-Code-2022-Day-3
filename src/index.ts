@@ -1,5 +1,4 @@
-import { assert } from "console";
-import { findDupes } from "./duplicates.js";
+import { findGroupDupes } from "./duplicates.js";
 import { getPriority } from "./priorities.js";
 import { getLineReader } from "./reader.js";
 
@@ -11,31 +10,30 @@ const lineReader = getLineReader({
 });
 
 let totalPriority = 0;
+let currentGroup: string[] = [];
 
 lineReader.on("line", (line) => {
-  const halfway = Math.ceil(line.length / 2);
-  const leftPouch = line.slice(0, halfway);
-  const rightPouch = line.slice(halfway, line.length);
+  currentGroup.push(line);
 
-  assert(leftPouch.length === rightPouch.length, "mismatching pouches!");
+  if (currentGroup.length === 3) {
+    const badge = findGroupDupes({
+      bags: currentGroup.map((bag) => bag.split("")),
+    });
 
-  const duplicatePresents = findDupes({
-    left: leftPouch.split(""),
-    right: rightPouch.split(""),
-  });
+    if (!badge) {
+      return console.error(
+        `Failed to find badge for group ${JSON.stringify(currentGroup)}`
+      );
+    }
 
-  duplicatePresents.forEach(
-    (duplicatePresent) =>
-      (totalPriority += getPriority({
-        itemType: duplicatePresent,
-      }))
-  );
+    console.log(`Group ${JSON.stringify(currentGroup)} has badge ${badge}`);
 
-  console.log(
-    `Left pouch ${leftPouch} and right pouch ${rightPouch} share ${JSON.stringify(
-      duplicatePresents
-    )}`
-  );
+    totalPriority += getPriority({
+      itemType: badge,
+    });
+
+    return (currentGroup = []);
+  }
 });
 
 lineReader.on("close", () => {
